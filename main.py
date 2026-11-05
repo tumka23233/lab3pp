@@ -87,3 +87,109 @@ class FinancialCalculator:
         self.loan_result.grid(row=4, column=0, columnspan=2, pady=10, sticky="w")
 
         container.grid_columnconfigure(1, weight=1)
+
+        def setup_deposit_frame(self):
+        """Элементы управления для вкладки Депозит."""
+        container = tk.Frame(self.deposit_frame, bg=settings.BG_CARD)
+        container.pack(pady=20, padx=20, fill=tk.BOTH)
+
+        # Поля ввода
+        tk.Label(container, text="Сумма вклада (руб.):", font=("Arial", 10), bg=settings.BG_CARD).grid(row=0, column=0, sticky="w", pady=5)
+        self.dep_amount = tk.Entry(container, font=("Arial", 11))
+        self.dep_amount.grid(row=0, column=1, pady=5, padx=10, sticky="we")
+
+        tk.Label(container, text="Срок вклада (месяцев):", font=("Arial", 10), bg=settings.BG_CARD).grid(row=1, column=0, sticky="w", pady=5)
+        self.dep_term = tk.Entry(container, font=("Arial", 11))
+        self.dep_term.grid(row=1, column=1, pady=5, padx=10, sticky="we")
+
+        tk.Label(container, text="Годовая ставка (%):", font=("Arial", 10), bg=settings.BG_CARD).grid(row=2, column=0, sticky="w", pady=5)
+        self.dep_rate = tk.Entry(container, font=("Arial", 11))
+        self.dep_rate.grid(row=2, column=1, pady=5, padx=10, sticky="we")
+
+        # Флаг капитализации процентов
+        self.cap_var = tk.BooleanVar()
+        self.cap_check = tk.Checkbutton(container, text="Ежемесячная капитализация", variable=self.cap_var, bg=settings.BG_CARD, font=("Arial", 10))
+        self.cap_check.grid(row=3, column=0, columnspan=2, pady=5, sticky="w")
+
+        # Кнопка расчета
+        btn_calc = tk.Button(container, text="Рассчитать", command=self.calculate_deposit, bg=settings.COLOR_ACCENT, fg="white", font=("Arial", 10, "bold"))
+        btn_calc.grid(row=4, column=0, columnspan=2, pady=15, sticky="we")
+
+        # Блок вывода результатов
+        self.dep_result = tk.Label(container, text="", font=("Arial", 11), bg=settings.BG_CARD, justify=tk.LEFT, anchor="w")
+        self.dep_result.grid(row=5, column=0, columnspan=2, pady=10, sticky="w")
+
+        container.grid_columnconfigure(1, weight=1)
+
+    def calculate_loan(self):
+        """Логика расчета аннуитетного кредита с обработкой ошибок ввода."""
+        try:
+            p = float(self.loan_amount.get())
+            n = int(self.loan_term.get())
+            r = float(self.loan_rate.get()) / 100 / 12  # Месячная процентная ставка
+
+            if p <= 0 or n <= 0 or r <= 0:
+                raise ValueError
+
+            # Формула аннуитетного платежа: A = P * (r * (1 + r)^n) / ((1 + r)^n - 1)
+            monthly_payment = p * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+            total_payment = monthly_payment * n
+            overpayment = total_payment - p
+
+            self.loan_result.config(
+                text=f"Ежемесячный платеж:  {monthly_payment:,.2f} руб.\n"
+                     f"Общая сумма выплат:  {total_payment:,.2f} руб.\n"
+                     f"Переплата по кредиту:  {overpayment:,.2f} руб.",
+                fg=settings.COLOR_TEXT
+            )
+        except ValueError:
+            messagebox.showerror("Ошибка ввода", "Пожалуйста, введите корректные положительные числа.")
+
+    def calculate_deposit(self):
+        """Логика расчета процентов по вкладу."""
+        try:
+            p = float(self.dep_amount.get())
+            n = int(self.dep_term.get())
+            r = float(self.dep_rate.get()) / 100
+
+            if p <= 0 or n <= 0 or r <= 0:
+                raise ValueError
+
+            if self.cap_var.get():
+                # Сложные проценты (капитализация каждый месяц): S = P * (1 + r/12)^n
+                final_amount = p * (1 + r / 12) ** n
+            else:
+                # Простые проценты (начисление в конце срока): S = P * (1 + r * (n/12))
+                final_amount = p * (1 + r * (n / 12))
+
+            profit = final_amount - p
+
+            self.dep_result.config(
+                text=f"Итоговая сумма:  {final_amount:,.2f} руб.\n"
+                     f"Начисленные проценты:  {profit:,.2f} руб.",
+                fg=settings.COLOR_TEXT
+            )
+        except ValueError:
+            messagebox.showerror("Ошибка ввода", "Пожалуйста, введите корректные положительные числа.")
+
+    def clear_all(self):
+        """Сброс всех полей ввода и результатов."""
+        for entry in [self.loan_amount, self.loan_term, self.loan_rate, self.dep_amount, self.dep_term, self.dep_rate]:
+            entry.delete(0, tk.END)
+        self.loan_result.config(text="")
+        self.dep_result.config(text="")
+        self.cap_var.set(False)
+
+    def show_formulas_info(self):
+        """Справочное окно с описанием формул."""
+        messagebox.showinfo(
+            "Информация о расчетах",
+            "1. Кредит рассчитывается по стандартной аннуитетной формуле (равные платежи каждый месяц).\n\n"
+            "2. Капитализация вклада — это начисление сложных процентов, когда ежемесячный доход прибавляется к основной сумме вклада и в следующем месяце тоже приносит процент."
+        )
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = FinancialCalculator(root)
+    root.mainloop()
